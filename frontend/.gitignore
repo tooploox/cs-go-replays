@@ -1,5 +1,9 @@
 /.direnv/
 
+# Parcel artifacts
+/dist/
+
+
 # Logs
 logs
 *.log
