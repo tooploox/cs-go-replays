@@ -4,8 +4,10 @@
   "main": "index.js",
   "license": "MIT",
   "devDependencies": {
+    "@types/socket.io": "^2.1.2",
     "demofile": "https://github.com/saul/demofile/archive/v1.0.6.tar.gz",
     "parcel-bundler": "^1.12.3",
+    "socket.io": "^2.2.0",
     "typescript": "^3.5.2",
     "yarn": "^1.16.0"
   },
