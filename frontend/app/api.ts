@@ -52,6 +52,7 @@ export class WebSocketProtocol {
             },
             headshot: e.headshot,
             weapon: e.weapon,
+            time: demoFile.currentTime,
           }))
         });
 
@@ -60,7 +61,8 @@ export class WebSocketProtocol {
           if (player) {
             this.socket.emit("player_footstep", JSON.stringify({
               id: e.userid,
-              position: player.position
+              position: player.position,
+              time: demoFile.currentTime,
             }))
           }
         });
