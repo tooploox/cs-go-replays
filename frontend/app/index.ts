@@ -30,6 +30,18 @@ function fileSize(number: number) {
     }
   }
 
+
+interface PlayerDeathEvent {
+  userid: number,
+  attacker: number,
+  headshot: boolean,
+  weapon: string
+}
+
+interface PlayerFootstepEvent {
+  userid: number
+}
+
 function process(file: File) {
     const reader = new FileReader()
     reader.onload = (ev: ProgressEvent) => {
@@ -43,28 +55,31 @@ function process(file: File) {
                 socket.emit("start", JSON.stringify(demoFile.header))
             })
 
-            demoFile.gameEvents.on("player_death", e => {
+            demoFile.gameEvents.on("player_death", (e: PlayerDeathEvent) => {
               const victim = demoFile.entities.getByUserId(e.userid)
-              const victimName = victim ? victim.name : "unnamed"
+              const victimName = victim ? victim.name : null
           
               // Attacker may have disconnected so be aware.
               // e.g. attacker could have thrown a grenade, disconnected, then that grenade
               // killed another player.
               const attacker = demoFile.entities.getByUserId(e.attacker)
-              const attackerName = attacker ? attacker.name : "unnamed"
-          
-              const headshotText = e.headshot ? " HS" : ""
+              const attackerName = attacker ? attacker.name : null
           
               socket.emit("player_death", JSON.stringify({
-                id: e.userid,
-                attackerName: attackerName,
+                attacker: {
+                  id: e.attacker,
+                  attackerName: attackerName,
+                },
+                victim: {
+                  name: victimName,
+                  id: e.userid,
+                },
+                headshot: e.headshot,
                 weapon: e.weapon,
-                headshotText: headshotText,
-                victimName: victimName
               }))
             });
 
-            demoFile.gameEvents.on("player_footstep", e => {
+            demoFile.gameEvents.on("player_footstep", (e: PlayerFootstepEvent) => {
               const player = demoFile.entities.getByUserId(e.userid)
               if (player) {
                 socket.emit("player_footstep", JSON.stringify({
