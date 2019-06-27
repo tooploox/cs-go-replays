@@ -22,7 +22,7 @@ def on_player_footstep(data):
     print(data)
 
 @socketio.on('end', namespace="/upload")
-def on_end(_data):
+def on_end():
     print("User data end")
 
 
