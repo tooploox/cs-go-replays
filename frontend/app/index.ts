@@ -1,11 +1,15 @@
-import * as demofile from "demofile"
-
 import io from "socket.io-client"
+import {Header, WebSocketProtocol} from "./api"
 
 const socket = io("http://localhost:5000/upload")
 
 const input = document.querySelector('input')
 const preview = document.querySelector('.preview');
+const ws = new WebSocketProtocol(socket, (header: Header) => {
+  const para = document.createElement('p');
+  para.textContent = `Demo server name: ${header.serverName}.`
+  preview.appendChild(para);
+})
 
 input.addEventListener('change', () => {
     preview.innerHTML = '';
@@ -30,73 +34,11 @@ function fileSize(number: number) {
     }
   }
 
-
-interface PlayerDeathEvent {
-  userid: number,
-  attacker: number,
-  headshot: boolean,
-  weapon: string
-}
-
-interface PlayerFootstepEvent {
-  userid: number
-}
-
 function process(file: File) {
     const reader = new FileReader()
     reader.onload = (ev: ProgressEvent) => {
         if (ev.loaded == ev.total) {
-            const demoFile = new demofile.DemoFile();
-            demoFile.on("start", () => {
-                const para = document.createElement('p');
-                para.textContent = "Demo server name:" + demoFile.header.serverName + ', TickRate ' + demoFile.tickRate + '.'
-                preview.appendChild(para);
-
-                socket.emit("start", JSON.stringify(demoFile.header))
-            })
-
-            demoFile.gameEvents.on("player_death", (e: PlayerDeathEvent) => {
-              const victim = demoFile.entities.getByUserId(e.userid)
-              const victimName = victim ? victim.name : null
-          
-              // Attacker may have disconnected so be aware.
-              // e.g. attacker could have thrown a grenade, disconnected, then that grenade
-              // killed another player.
-              const attacker = demoFile.entities.getByUserId(e.attacker)
-              const attackerName = attacker ? attacker.name : null
-          
-              socket.emit("player_death", JSON.stringify({
-                attacker: {
-                  id: e.attacker,
-                  attackerName: attackerName,
-                },
-                victim: {
-                  name: victimName,
-                  id: e.userid,
-                },
-                headshot: e.headshot,
-                weapon: e.weapon,
-              }))
-            });
-
-            demoFile.gameEvents.on("player_footstep", (e: PlayerFootstepEvent) => {
-              const player = demoFile.entities.getByUserId(e.userid)
-              if (player) {
-                socket.emit("player_footstep", JSON.stringify({
-                  id: e.userid,
-                  position: player.position
-                }))
-              }
-            });
-
-            demoFile.on("end", () => {
-              socket.emit("end")
-              // Stop parsing - we're finished
-              demoFile.cancel()
-            })
-
-            
-            demoFile.parse(reader.result);
+          ws.fromBuffer(reader.result as ArrayBuffer)
         }
     }
     reader.readAsArrayBuffer(file)
