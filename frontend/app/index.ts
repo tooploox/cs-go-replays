@@ -15,6 +15,10 @@ socket.on("render_error", (cause: string) => {
   console.error(cause)
 })
 
+socket.on("render_done", (path: string) => {
+  console.log(path)
+})
+
 input.addEventListener('change', () => {
     preview.innerHTML = '';
     const para = document.createElement('p');

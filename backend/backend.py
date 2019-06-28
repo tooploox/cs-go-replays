@@ -3,7 +3,7 @@ from uuid import uuid4
 import json
 from multiprocessing import Pool
 
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room
 from flask import Flask, render_template, request
 from cachetools import LRUCache
 
@@ -14,10 +14,10 @@ socketio = SocketIO(app)
 
 buf = LRUCache(1024)
 
-def render(data):
+def render(path, data):
     from visualize.animator import Animator
 
-    Animator(data).create(f"anim/{str(uuid4())}.mp4")
+    Animator(data).create(path)
 
 @socketio.on('message', namespace="/upload")
 def on_message(data):
@@ -36,13 +36,17 @@ with Pool(10) as p:
         if request.sid not in buf or buf[request.sid] == []:
             emit("render_error", "empty_data")
         else:
+            room = str(uuid4())
+            path = f"anim/{room}.mp4"
+            join_room(room)
             try:
-                p.apply_async(
+                res = p.apply_async(
                     func=render,
-                    args=(buf[request.sid],),
-                    callback=lambda x: print("Done"),
-                    error_callback=lambda x: print("Fail", x)
+                    args=(path, buf[request.sid],),
+                    error_callback=lambda x: socketio.emit("render_error", "server_error", room=room) # Outside request context -> cannot use top-level emit()
                 )
+                res.get(timeout=60)
+                emit("render_done", path),
             except:
                 emit("render_error", "server_error")
                 raise
