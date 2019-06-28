@@ -39,15 +39,22 @@ function stringify(event: string, payload?: any): string {
 export class WebSocketProtocol {
   constructor(
     readonly socket: Socket,
-    readonly onStart: (header: Header) => void
+    readonly onStart?: (header: Header) => void,
+    readonly onTransfer?: (chunkSize: number) => void,
+    readonly onTransferFinish?: () => void
   ) { }
+
+  transfer(data: string) {
+    this.socket.send(data)
+    this.onTransfer && this.onTransfer(data.length)
+  }
 
   fromBuffer(buf: ArrayBuffer) {
     this.socket.emit("new_upload")
     const demoFile = new demofile.DemoFile();
     demoFile.on("start", () => {
-      this.onStart(demoFile.header)
-      this.socket.send(stringify("start", demoFile.header))
+      this.onStart && this.onStart(demoFile.header)
+      this.transfer(stringify("start", demoFile.header))
     })
 
     demoFile.gameEvents.on("player_death", (e: PlayerDeathEvent) => {
@@ -60,7 +67,7 @@ export class WebSocketProtocol {
       const attacker = demoFile.entities.getByUserId(e.attacker)
       const attackerName = attacker ? attacker.name : null
 
-      this.socket.send(stringify("player_death", {
+      this.transfer(stringify("player_death", {
         attacker: {
           id: e.attacker,
           attackerName: attackerName,
@@ -78,7 +85,7 @@ export class WebSocketProtocol {
     demoFile.gameEvents.on("player_footstep", (e: PlayerFootstepEvent) => {
       const player = demoFile.entities.getByUserId(e.userid)
       if (player) {
-        this.socket.send(stringify("player_footstep", {
+        this.transfer(stringify("player_footstep", {
           id: e.userid,
           position: player.position,
           time: demoFile.currentTime,
@@ -87,7 +94,7 @@ export class WebSocketProtocol {
     })
 
     demoFile.gameEvents.on("round_start", (e: RoundStartEvent) => {
-      this.socket.send(stringify("round_start", {
+      this.transfer(stringify("round_start", {
         time: demoFile.currentTime,
         timelimit: e.timelimit,
         fraglimit: e.fraglimit,
@@ -96,13 +103,13 @@ export class WebSocketProtocol {
     })
 
     demoFile.gameEvents.on("round_announce_match_start", () => {
-      this.socket.send(stringify("round_announce_match_start", {
+      this.transfer(stringify("round_announce_match_start", {
         time: demoFile.currentTime
       }))
     })
 
     demoFile.gameEvents.on("round_end", (e: RoundEndEvent) => {
-      this.socket.send(stringify("round_end", {
+      this.transfer(stringify("round_end", {
         time: demoFile.currentTime,
         reason: e.reason
       }))
@@ -113,7 +120,7 @@ export class WebSocketProtocol {
       const ts = teams[2]
       const cts = teams[3]
 
-      this.socket.send(stringify("round_officially_ended", {
+      this.transfer(stringify("round_officially_ended", {
         ts: {
           score: ts.score
         },
@@ -124,10 +131,11 @@ export class WebSocketProtocol {
     })
 
     demoFile.on("end", () => {
-      this.socket.send(stringify("end"))
+      this.transfer(stringify("end"))
       this.socket.emit("render")
       // Stop parsing - we're finished
       demoFile.cancel()
+      this.onTransferFinish && this.onTransferFinish()
     })
 
 
