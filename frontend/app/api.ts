@@ -1,11 +1,13 @@
 import * as demofile from "demofile"
-import Socket from "socket.io-client"
 
 export interface Header {
     serverName: string,
     tickRate: number
 }
 
+interface Socket {
+  send: (payload: any) => void
+}
 
 interface PlayerDeathEvent {
     userid: number,
@@ -18,6 +20,21 @@ interface PlayerFootstepEvent {
     userid: number
 }
 
+interface RoundEndEvent {
+  reason: string
+}
+
+// https://wiki.alliedmods.net/Counter-Strike:_Global_Offensive_Events#round_start
+interface RoundStartEvent {
+  timelimit: number,
+  fraglimit: number,
+  objective: string
+}
+
+function stringify(event: string, payload?: any): string {
+  return JSON.stringify([event, payload])
+}
+
 export class WebSocketProtocol {
     constructor(
         readonly socket: Socket,
@@ -28,7 +45,7 @@ export class WebSocketProtocol {
         const demoFile = new demofile.DemoFile();
         demoFile.on("start", () => {
             this.onStart(demoFile.header)
-            this.socket.emit("start", JSON.stringify(demoFile.header))
+            this.socket.send(stringify("start", demoFile.header))
         })
 
         demoFile.gameEvents.on("player_death", (e: PlayerDeathEvent) => {
@@ -41,7 +58,7 @@ export class WebSocketProtocol {
           const attacker = demoFile.entities.getByUserId(e.attacker)
           const attackerName = attacker ? attacker.name : null
       
-          this.socket.emit("player_death", JSON.stringify({
+          this.socket.send(stringify("player_death", {
             attacker: {
               id: e.attacker,
               attackerName: attackerName,
@@ -59,16 +76,53 @@ export class WebSocketProtocol {
         demoFile.gameEvents.on("player_footstep", (e: PlayerFootstepEvent) => {
           const player = demoFile.entities.getByUserId(e.userid)
           if (player) {
-            this.socket.emit("player_footstep", JSON.stringify({
+            this.socket.send(stringify("player_footstep", {
               id: e.userid,
               position: player.position,
               time: demoFile.currentTime,
             }))
           }
-        });
+        })
+      
+        demoFile.gameEvents.on("round_start", (e: RoundStartEvent)=> {
+          this.socket.send(stringify("round_start", {
+            time: demoFile.currentTime,
+            timelimit: e.timelimit,
+            fraglimit: e.fraglimit,
+            objective: e.objective
+          }))
+        })
+      
+        demoFile.gameEvents.on("round_announce_match_start", ()=> {
+          this.socket.send(stringify("round_announce_match_start", {
+            time: demoFile.currentTime
+          }))
+        })
+      
+        demoFile.gameEvents.on("round_end", (e: RoundEndEvent)=> {
+          this.socket.send(stringify("round_end", {
+            time: demoFile.currentTime,
+            reason: e.reason
+          }))
+        })
+      
+        demoFile.gameEvents.on("round_officially_ended", () => {
+          const teams = demoFile.teams
+          const ts = teams[2]
+          const cts = teams[3]
+
+          this.socket.send(stringify("round_officially_ended", {
+            ts: {
+              score: ts.score
+            },
+            cts: {
+              score: cts.score
+            }
+          }))
+        })
 
         demoFile.on("end", () => {
-          this.socket.emit("end")
+          this.socket.send(stringify("end"))
           // Stop parsing - we're finished
           demoFile.cancel()
         })
