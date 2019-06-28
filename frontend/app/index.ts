@@ -11,6 +11,10 @@ const ws = new WebSocketProtocol(socket, (header: Header) => {
   preview.appendChild(para);
 })
 
+socket.on("render_error", (cause: string) => {
+  console.error(cause)
+})
+
 input.addEventListener('change', () => {
     preview.innerHTML = '';
     const para = document.createElement('p');
