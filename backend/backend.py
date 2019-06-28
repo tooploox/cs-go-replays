@@ -4,7 +4,7 @@ import json
 from multiprocessing import Pool
 
 from flask_socketio import SocketIO, emit, join_room
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, send_from_directory
 from cachetools import LRUCache
 
 
@@ -29,6 +29,10 @@ def on_message(data):
 def on_reset():
     if request.sid in buf:
         buf[request.sid] = []
+
+@app.route('/anim/<path:path>')
+def send_js(path):
+    return send_from_directory('anim', path)
 
 with Pool(10) as p:
     @socketio.on('render', namespace="/upload")

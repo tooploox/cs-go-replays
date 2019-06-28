@@ -1,7 +1,9 @@
 import io from "socket.io-client"
-import {Header, WebSocketProtocol} from "./api"
+import { Header, WebSocketProtocol } from "./api"
 
-const socket = io("http://localhost:5000/upload")
+const API = "http://localhost:5000"
+
+const socket = io(`${API}/upload`)
 
 const input = document.querySelector('input')
 const preview = document.querySelector('.preview');
@@ -16,7 +18,21 @@ socket.on("render_error", (cause: string) => {
 })
 
 socket.on("render_done", (path: string) => {
-  console.log(path)
+//   <video width="320" height="240" controls>
+//   <source src="movie.mp4" type="video/mp4">
+//   Your browser does not support the video tag.
+//   </video>
+  preview.innerHTML = ''
+  const v = document.createElement('video')
+  v.width = 320
+  v.height = 240
+  v.controls = true
+  v.innerText = 'Your browser does not support the video tag.'
+  const vSrc = document.createElement('source')
+  vSrc.src = `${API}/${path}`
+  vSrc.type = "video/mp4"
+  v.appendChild(vSrc)
+  preview.appendChild(v)
 })
 
 input.addEventListener('change', () => {
