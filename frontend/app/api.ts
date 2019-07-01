@@ -49,7 +49,7 @@ export class WebSocketProtocol {
     this.onTransfer && this.onTransfer(data.length)
   }
 
-  fromBuffer(buf: ArrayBuffer) {
+  fromBuffer(buf: ArrayBuffer, onEndCallback?: Function) {
     this.socket.emit("new_upload")
     const demoFile = new demofile.DemoFile();
     demoFile.on("start", () => {
@@ -136,6 +136,7 @@ export class WebSocketProtocol {
       // Stop parsing - we're finished
       demoFile.cancel()
       this.onTransferFinish && this.onTransferFinish()
+      onEndCallback && onEndCallback()
     })
 
 
