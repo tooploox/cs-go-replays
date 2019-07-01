@@ -12,6 +12,11 @@
     "yarn": "^1.16.0"
   },
   "scripts": {
-    "dev": "parcel app/index.html"
+    "dev": "parcel app/index.html",
+    "scan": "ts-node demo_scanner/start"
+  },
+  "dependencies": {
+    "md5-file": "^4.0.0",
+    "ts-node": "^8.3.0"
   }
 }

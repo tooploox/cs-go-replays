@@ -95,4 +95,4 @@ typings/
 
 # other
 package-lock.json
-
+state.json
