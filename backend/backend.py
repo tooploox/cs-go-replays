@@ -7,34 +7,37 @@ from flask_socketio import SocketIO, emit, join_room
 from flask import Flask, render_template, request, send_from_directory
 from cachetools import LRUCache
 
-
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
-socketio = SocketIO(app)
-
-buf = LRUCache(1024)
-
 def render(path, data):
     from visualize.animator import Animator
 
     Animator(data).create(path)
 
-@socketio.on('message', namespace="/upload")
-def on_message(data):
-    if request.sid not in buf:
-        buf[request.sid] = []
-    buf[request.sid].append(json.loads(data))
+def backend(worker_pool, **kwargs):
+    app = Flask(__name__)
+    app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
+    socketio = SocketIO(app)
 
-@socketio.on('reset', namespace="/upload")
-def on_reset():
-    if request.sid in buf:
-        buf[request.sid] = []
+    buf = LRUCache(1024)
 
-@app.route('/anim/<path:path>')
-def send_js(path):
-    return send_from_directory('anim', path)
+    @socketio.on('message', namespace="/upload")
+    def on_message(data):
+        if request.sid not in buf:
+            buf[request.sid] = []
+        buf[request.sid].append(json.loads(data))
 
-with Pool(10) as p:
+    @socketio.on('reset', namespace="/upload")
+    def on_reset():
+        if request.sid in buf:
+            buf[request.sid] = []
+
+    @app.route('/anim/<path:path>')
+    def send_anim(path):
+        return send_from_directory('anim', path)
+
+    @app.route('/dist/<path:path>')
+    def send_dist(path):
+        return send_from_directory('dist', path)
+
     @socketio.on('render', namespace="/upload")
     def on_render():
         if request.sid not in buf or buf[request.sid] == []:
@@ -44,7 +47,7 @@ with Pool(10) as p:
             path = f"anim/{room}.mp4"
             join_room(room)
             try:
-                res = p.apply_async(
+                res = worker_pool.apply_async(
                     func=render,
                     args=(path, buf[request.sid],),
                     error_callback=lambda x: socketio.emit("render_error", "server_error", room=room) # Outside request context -> cannot use top-level emit()
@@ -54,6 +57,8 @@ with Pool(10) as p:
             except:
                 emit("render_error", "server_error")
                 raise
+    return socketio.run(app, **kwargs)
 
-    if __name__ == '__main__':
-        socketio.run(app)
+if __name__ == '__main__':
+    with Pool(2) as p:
+        backend(p)
