@@ -1,0 +1,8 @@
+/.*
+
+/backend/.*
+/backend/anim/
+
+/frontend/.*
+/frotend/dist/
+/frontend/node_modules/

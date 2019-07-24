@@ -13,7 +13,8 @@
   },
   "scripts": {
     "dev": "parcel app/index.html",
-    "scan": "ts-node demo_scanner/start"
+    "scan": "ts-node demo_scanner/start",
+    "build": "parcel build app/index.html"
   },
   "dependencies": {
     "md5-file": "^4.0.0",
