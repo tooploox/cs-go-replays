@@ -14,7 +14,7 @@ itsdangerous==1.1.0
 kiwisolver==1.1.0
 matplotlib==3.1.0
 monotonic==1.5
-numpy==1.16.4
+numpy==1.22.0
 pyparsing==2.4.0
 python-dateutil==2.8.0
 python-engineio==3.8.2.post1
